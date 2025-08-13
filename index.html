@@ -1,0 +1,766 @@
+import React, { useState, useRef } from 'react';
+import { Camera, CheckCircle, XCircle, Upload, Download, Users, BarChart3, Calendar, MapPin, FileText, LogOut, Eye, Trash2 } from 'lucide-react';
+
+const CleaningServiceApp = () => {
+  const [currentUser, setCurrentUser] = useState(null);
+  const [currentView, setCurrentView] = useState('login');
+  const [reports, setReports] = useState([]);
+  const [currentReport, setCurrentReport] = useState(null);
+  const [photos, setPhotos] = useState([]);
+  const fileInputRef = useRef(null);
+
+  // Data struktur
+  const areas = [
+    'Area Luar', 'Office', 'Rest Area', 'Finish Good', 'Locker Karyawan', 
+    'Utility', 'Raw Material', 'Lantai 1 Produksi', 'Lantai 2 Produksi', 
+    'Lantai 3 Produksi', 'Lantai 4 Produksi', 'Lantai 5 Produksi', 'Lantai 6 Produksi'
+  ];
+
+  const checklistItems = ['Lantai', 'Jendela & Kaca', 'Dinding', 'Atap', 'Meja', 'Sampah'];
+
+  const users = {
+    admin: { name: 'Supervisor GA', role: 'admin', password: 'admin123' },
+    // 6 Staff Cleaning Service - Data Aktual
+    suprapto: { 
+      name: 'Suprapto', 
+      role: 'staff', 
+      password: 'cssghi001', 
+      areas: ['Area Luar'] 
+    },
+    apri: { 
+      name: 'Apri', 
+      role: 'staff', 
+      password: 'cssghi002', 
+      areas: ['Office', 'Rest Area'] 
+    },
+    andri: { 
+      name: 'Andri', 
+      role: 'staff', 
+      password: 'cssghi003', 
+      areas: ['Locker Karyawan', 'Utility', 'Finish Good'] 
+    },
+    ari: { 
+      name: 'Ari', 
+      role: 'staff', 
+      password: 'cssghi004', 
+      areas: ['Raw Material', 'Lantai 1 Produksi'] 
+    },
+    yuhan: { 
+      name: 'Yuhan', 
+      role: 'staff', 
+      password: 'cssghi005', 
+      areas: ['Lantai 2 Produksi', 'Lantai 4 Produksi'] 
+    },
+    'sumarsono kusuma': { 
+      name: 'Sumarsono Kusuma', 
+      role: 'staff', 
+      password: 'cssghi006', 
+      areas: ['Lantai 4 Produksi', 'Lantai 5 Produksi', 'Lantai 6 Produksi'] 
+    }
+  };
+
+  // Login Component
+  const LoginScreen = () => {
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
+
+    const handleLogin = () => {
+      if (users[username] && users[username].password === password) {
+        setCurrentUser({ username, ...users[username] });
+        setCurrentView(users[username].role === 'admin' ? 'dashboard' : 'staff-menu');
+        setError('');
+      } else {
+        setError('Username atau password salah');
+      }
+    };
+
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-xl shadow-xl p-8 w-full max-w-md">
+          <div className="text-center mb-8">
+            <div className="bg-blue-600 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+              <Users className="text-white w-8 h-8" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-800">Cleaning Service Tracker</h1>
+            <p className="text-gray-600 text-sm">PT. Sekar Golden Harvesta Indonesia</p>
+          </div>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Username</label>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Masukkan username"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Masukkan password"
+              />
+            </div>
+            {error && <p className="text-red-500 text-sm">{error}</p>}
+            <button
+              onClick={handleLogin}
+              className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition duration-200 font-medium"
+            >
+              Login
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Admin Dashboard
+  const AdminDashboard = () => {
+    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+    
+    const todayReports = reports.filter(r => {
+      const reportDate = new Date(r.timestamp).toISOString().split('T')[0];
+      return reportDate === selectedDate;
+    });
+
+    const getTodayString = () => {
+      const today = new Date(selectedDate);
+      return today.toLocaleDateString('id-ID', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+    };
+
+    const getAreaStatus = () => {
+      const completedAreas = todayReports.map(r => r.area);
+      const pendingAreas = areas.filter(area => !completedAreas.includes(area));
+      return { completedAreas, pendingAreas };
+    };
+
+    const { completedAreas, pendingAreas } = getAreaStatus();
+
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="bg-white shadow-sm border-b px-6 py-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-800">Dashboard Supervisor - Laporan Harian</h1>
+              <p className="text-gray-600">{getTodayString()}</p>
+            </div>
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center">
+                <Calendar className="w-4 h-4 mr-2 text-gray-500" />
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="border border-gray-300 rounded px-3 py-1 text-sm"
+                />
+              </div>
+              <button
+                onClick={() => {setCurrentUser(null); setCurrentView('login');}}
+                className="flex items-center text-red-600 hover:text-red-800"
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-6">
+          {/* Statistics Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div className="bg-white p-6 rounded-xl shadow-sm">
+              <div className="flex items-center">
+                <div className="bg-blue-100 p-3 rounded-full">
+                  <FileText className="w-6 h-6 text-blue-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm text-gray-600">Laporan Hari Ini</p>
+                  <p className="text-2xl font-bold text-gray-800">{todayReports.length}</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white p-6 rounded-xl shadow-sm">
+              <div className="flex items-center">
+                <div className="bg-green-100 p-3 rounded-full">
+                  <CheckCircle className="w-6 h-6 text-green-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm text-gray-600">Area Selesai</p>
+                  <p className="text-2xl font-bold text-gray-800">{completedAreas.length}</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white p-6 rounded-xl shadow-sm">
+              <div className="flex items-center">
+                <div className="bg-yellow-100 p-3 rounded-full">
+                  <MapPin className="w-6 h-6 text-yellow-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm text-gray-600">Area Pending</p>
+                  <p className="text-2xl font-bold text-gray-800">{pendingAreas.length}</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white p-6 rounded-xl shadow-sm">
+              <div className="flex items-center">
+                <div className="bg-purple-100 p-3 rounded-full">
+                  <BarChart3 className="w-6 h-6 text-purple-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm text-gray-600">Progress Harian</p>
+                  <p className="text-2xl font-bold text-gray-800">{Math.round((completedAreas.length/areas.length)*100)}%</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Area Status */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            {/* Completed Areas */}
+            <div className="bg-white rounded-xl shadow-sm">
+              <div className="p-6 border-b border-gray-200">
+                <h2 className="text-xl font-semibold text-green-600">Area Sudah Dibersihkan</h2>
+                <p className="text-sm text-gray-600">Total: {completedAreas.length} area</p>
+              </div>
+              <div className="p-6">
+                {completedAreas.length === 0 ? (
+                  <p className="text-gray-500 text-center py-4">Belum ada area yang diselesaikan</p>
+                ) : (
+                  <div className="space-y-2">
+                    {completedAreas.map((area, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                        <div className="flex items-center">
+                          <CheckCircle className="w-5 h-5 text-green-600 mr-3" />
+                          <span className="text-gray-800">{area}</span>
+                        </div>
+                        <span className="text-xs text-green-600 font-medium">Selesai</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Pending Areas */}
+            <div className="bg-white rounded-xl shadow-sm">
+              <div className="p-6 border-b border-gray-200">
+                <h2 className="text-xl font-semibold text-yellow-600">Area Belum Dibersihkan</h2>
+                <p className="text-sm text-gray-600">Total: {pendingAreas.length} area</p>
+              </div>
+              <div className="p-6">
+                {pendingAreas.length === 0 ? (
+                  <div className="text-center py-4">
+                    <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-2" />
+                    <p className="text-green-600 font-medium">Semua area sudah dibersihkan!</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {pendingAreas.map((area, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
+                        <div className="flex items-center">
+                          <XCircle className="w-5 h-5 text-yellow-600 mr-3" />
+                          <span className="text-gray-800">{area}</span>
+                        </div>
+                        <span className="text-xs text-yellow-600 font-medium">Pending</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Recent Reports */}
+          <div className="bg-white rounded-xl shadow-sm">
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-800">Laporan Harian - {getTodayString()}</h2>
+              <p className="text-sm text-gray-600">Riwayat laporan pembersihan hari ini</p>
+            </div>
+            <div className="p-6">
+              {todayReports.length === 0 ? (
+                <div className="text-center py-8">
+                  <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500 text-lg mb-2">Belum ada laporan untuk tanggal ini</p>
+                  <p className="text-gray-400 text-sm">Laporan akan muncul setelah staff submit pembersihan area</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {todayReports.map((report, index) => (
+                    <div key={index} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                      <div className="flex items-center">
+                        <div className="bg-green-100 p-2 rounded-full mr-4">
+                          <CheckCircle className="w-5 h-5 text-green-600" />
+                        </div>
+                        <div>
+                          <h3 className="font-medium text-gray-800">{report.area}</h3>
+                          <p className="text-sm text-gray-600">
+                            Oleh: {report.staff} • {new Date(report.timestamp).toLocaleTimeString('id-ID', {hour: '2-digit', minute: '2-digit'})} WIB
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setCurrentReport(report);
+                          setCurrentView('view-report');
+                        }}
+                        className="flex items-center text-blue-600 hover:text-blue-800 px-3 py-1 rounded hover:bg-blue-50"
+                      >
+                        <Eye className="w-4 h-4 mr-1" />
+                        <span className="text-sm">Lihat</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Staff Menu
+  const StaffMenu = () => {
+    const [selectedArea, setSelectedArea] = useState('');
+
+    const handleAreaSelection = (area) => {
+      setCurrentReport({
+        area,
+        staff: currentUser.name,
+        timestamp: new Date().toISOString(),
+        checklist: {},
+        photos: []
+      });
+      setPhotos([]);
+      setCurrentView('create-report');
+    };
+
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="bg-white shadow-sm border-b px-6 py-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-800">Pilih Area Kerja</h1>
+              <p className="text-gray-600">Selamat datang, {currentUser.name}</p>
+            </div>
+            <button
+              onClick={() => {setCurrentUser(null); setCurrentView('login');}}
+              className="flex items-center text-red-600 hover:text-red-800"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Logout
+            </button>
+          </div>
+        </div>
+
+        <div className="p-6">
+          <div className="bg-white p-6 rounded-xl shadow-sm mb-6">
+            <h2 className="text-lg font-semibold text-gray-800 mb-2">Laporan Harian - {new Date().toLocaleDateString('id-ID')}</h2>
+            <p className="text-gray-600 mb-4">Silahkan pilih area yang akan dibersihkan hari ini:</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {areas.map((area, index) => (
+                <button
+                  key={index}
+                  onClick={() => handleAreaSelection(area)}
+                  className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-all duration-200 text-left"
+                >
+                  <div className="flex items-center">
+                    <MapPin className="w-5 h-5 text-blue-600 mr-3" />
+                    <span className="font-medium text-gray-700">{area}</span>
+                  </div>
+                  <div className="text-blue-600">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Info Card */}
+          <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+            <div className="flex items-start">
+              <div className="bg-blue-100 p-2 rounded-full mr-3">
+                <Calendar className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-blue-800 mb-1">Laporan Harian</h3>
+                <p className="text-sm text-blue-700">
+                  Setiap area harus dibersihkan dan dilaporkan setiap hari. Pastikan semua checklist terisi dan foto dokumentasi dilengkapi.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Create Report
+  const CreateReport = () => {
+    const handleChecklistChange = (item, status) => {
+      setCurrentReport(prev => ({
+        ...prev,
+        checklist: {
+          ...prev.checklist,
+          [item]: status
+        }
+      }));
+    };
+
+    const handlePhotoUpload = (e) => {
+      const files = Array.from(e.target.files);
+      if (photos.length + files.length > 8) {
+        alert('Maksimal 8 foto per laporan');
+        return;
+      }
+
+      files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const newPhoto = {
+            id: Date.now() + Math.random(),
+            url: event.target.result,
+            caption: '',
+            timestamp: new Date().toISOString()
+          };
+          setPhotos(prev => [...prev, newPhoto]);
+        };
+        reader.readAsDataURL(file);
+      });
+    };
+
+    const updatePhotoCaption = (photoId, caption) => {
+      setPhotos(prev => prev.map(photo => 
+        photo.id === photoId ? {...photo, caption} : photo
+      ));
+    };
+
+    const removePhoto = (photoId) => {
+      setPhotos(prev => prev.filter(photo => photo.id !== photoId));
+    };
+
+    const submitReport = () => {
+      const allChecked = checklistItems.every(item => currentReport.checklist[item]);
+      if (!allChecked) {
+        alert('Harap lengkapi semua checklist terlebih dahulu');
+        return;
+      }
+
+      if (photos.length === 0) {
+        alert('Minimal 1 foto harus diunggah');
+        return;
+      }
+
+      const finalReport = {
+        ...currentReport,
+        photos: photos,
+        id: Date.now()
+      };
+
+      setReports(prev => [...prev, finalReport]);
+      
+      // Notifikasi sukses dengan detail laporan
+      const successMessage = `✅ Laporan berhasil dikirim!\n\nDetail:\n• Area: ${currentReport.area}\n• Staff: ${currentReport.staff}\n• Waktu: ${new Date().toLocaleTimeString('id-ID')} WIB\n• Foto: ${photos.length} buah\n\nTerima kasih atas kerja keras Anda!`;
+      alert(successMessage);
+      
+      setCurrentView(currentUser.role === 'admin' ? 'dashboard' : 'staff-menu');
+    };
+
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="bg-white shadow-sm border-b px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-800">Buat Laporan</h1>
+              <p className="text-gray-600">{currentReport?.area}</p>
+            </div>
+            <button
+              onClick={() => setCurrentView(currentUser.role === 'admin' ? 'dashboard' : 'staff-menu')}
+              className="text-gray-600 hover:text-gray-800"
+            >
+              Kembali
+            </button>
+          </div>
+        </div>
+
+        <div className="p-6 max-w-4xl mx-auto">
+          {/* Info Card */}
+          <div className="bg-white p-6 rounded-xl shadow-sm mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="text-sm text-gray-600">Nama Staff</label>
+                <p className="font-semibold text-gray-800">{currentReport?.staff}</p>
+              </div>
+              <div>
+                <label className="text-sm text-gray-600">Area/Lokasi</label>
+                <p className="font-semibold text-gray-800">{currentReport?.area}</p>
+              </div>
+              <div>
+                <label className="text-sm text-gray-600">Tanggal</label>
+                <p className="font-semibold text-gray-800">{new Date().toLocaleDateString('id-ID')}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Checklist */}
+          <div className="bg-white p-6 rounded-xl shadow-sm mb-6">
+            <h2 className="text-xl font-semibold text-gray-800 mb-4">Checklist Pembersihan</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {checklistItems.map(item => (
+                <div key={item} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                  <span className="font-medium text-gray-700">{item}</span>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => handleChecklistChange(item, true)}
+                      className={`p-2 rounded-full ${
+                        currentReport?.checklist[item] === true 
+                          ? 'bg-green-100 text-green-600' 
+                          : 'bg-gray-100 text-gray-400 hover:bg-green-50 hover:text-green-500'
+                      }`}
+                    >
+                      <CheckCircle className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => handleChecklistChange(item, false)}
+                      className={`p-2 rounded-full ${
+                        currentReport?.checklist[item] === false 
+                          ? 'bg-red-100 text-red-600' 
+                          : 'bg-gray-100 text-gray-400 hover:bg-red-50 hover:text-red-500'
+                      }`}
+                    >
+                      <XCircle className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Photo Upload */}
+          <div className="bg-white p-6 rounded-xl shadow-sm mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-gray-800">Foto Dokumentasi</h2>
+              <span className="text-sm text-gray-600">{photos.length}/8 foto</span>
+            </div>
+            
+            {photos.length < 8 && (
+              <div className="mb-6">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handlePhotoUpload}
+                  className="hidden"
+                />
+                <button
+                  onClick={() => fileInputRef.current.click()}
+                  className="flex items-center justify-center w-full p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition duration-200"
+                >
+                  <Camera className="w-8 h-8 text-gray-400 mr-3" />
+                  <span className="text-gray-600">Tambah Foto (Maksimal 8)</span>
+                </button>
+              </div>
+            )}
+
+            {photos.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {photos.map(photo => (
+                  <div key={photo.id} className="relative border border-gray-200 rounded-lg overflow-hidden">
+                    <img
+                      src={photo.url}
+                      alt="Dokumentasi"
+                      className="w-full h-48 object-cover"
+                    />
+                    <div className="p-3">
+                      <input
+                        type="text"
+                        placeholder="Tambahkan keterangan foto..."
+                        value={photo.caption}
+                        onChange={(e) => updatePhotoCaption(photo.id, e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                      />
+                    </div>
+                    <button
+                      onClick={() => removePhoto(photo.id)}
+                      className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Submit Button */}
+          <div className="flex justify-end">
+            <button
+              onClick={submitReport}
+              className="bg-green-600 text-white px-8 py-3 rounded-lg hover:bg-green-700 transition duration-200 font-medium"
+            >
+              Kirim Laporan
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // View Report
+  const ViewReport = () => {
+    if (!currentReport) return null;
+
+    const generatePDF = () => {
+      alert('Fitur export PDF akan diimplementasikan dengan library PDF generator');
+    };
+
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="bg-white shadow-sm border-b px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-800">Detail Laporan</h1>
+              <p className="text-gray-600">{currentReport.area}</p>
+            </div>
+            <div className="flex space-x-3">
+              <button
+                onClick={generatePDF}
+                className="flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Export PDF
+              </button>
+              <button
+                onClick={() => setCurrentView(currentUser.role === 'admin' ? 'dashboard' : 'staff-menu')}
+                className="text-gray-600 hover:text-gray-800"
+              >
+                Kembali
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-6 max-w-4xl mx-auto">
+          {/* Report Header */}
+          <div className="bg-white p-6 rounded-xl shadow-sm mb-6">
+            <div className="text-center mb-6">
+              <h2 className="text-xl font-bold text-gray-800">LAPORAN PEKERJAAN</h2>
+              <p className="text-lg text-gray-700">DIVISI CLEANING SERVICE</p>
+              <p className="text-base text-gray-600">PT. SEKAR GOLDEN HARVESTA INDONESIA</p>
+              <p className="text-sm text-gray-500 mt-2">FR-17/01 Rev. 00</p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="text-sm text-gray-600">NAMA:</label>
+                <p className="font-semibold text-gray-800">{currentReport.staff}</p>
+              </div>
+              <div>
+                <label className="text-sm text-gray-600">AREA/LOKASI PEKERJAAN:</label>
+                <p className="font-semibold text-gray-800">{currentReport.area}</p>
+              </div>
+              <div>
+                <label className="text-sm text-gray-600">PERIODE:</label>
+                <p className="font-semibold text-gray-800">{new Date(currentReport.timestamp).toLocaleDateString('id-ID')}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Checklist Table */}
+          <div className="bg-white p-6 rounded-xl shadow-sm mb-6">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">PEMBERSIHAN</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse border border-gray-300">
+                <thead>
+                  <tr className="bg-gray-50">
+                    <th className="border border-gray-300 px-4 py-2 text-left">Item Pembersihan</th>
+                    <th className="border border-gray-300 px-4 py-2 text-center">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {checklistItems.map(item => (
+                    <tr key={item}>
+                      <td className="border border-gray-300 px-4 py-2">{item}</td>
+                      <td className="border border-gray-300 px-4 py-2 text-center">
+                        {currentReport.checklist[item] === true ? (
+                          <CheckCircle className="w-5 h-5 text-green-600 mx-auto" />
+                        ) : (
+                          <XCircle className="w-5 h-5 text-red-600 mx-auto" />
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Photos */}
+          {currentReport.photos && currentReport.photos.length > 0 && (
+            <div className="bg-white p-6 rounded-xl shadow-sm">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Dokumentasi Foto</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {currentReport.photos.map((photo, index) => (
+                  <div key={index} className="border border-gray-200 rounded-lg overflow-hidden">
+                    <img
+                      src={photo.url}
+                      alt={`Dokumentasi ${index + 1}`}
+                      className="w-full h-48 object-cover"
+                    />
+                    <div className="p-3">
+                      <p className="text-sm text-gray-700">
+                        <strong>Keterangan:</strong> {photo.caption || 'Tidak ada keterangan'}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {new Date(photo.timestamp).toLocaleString('id-ID')}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // Render based on current view
+  const renderCurrentView = () => {
+    switch (currentView) {
+      case 'login':
+        return <LoginScreen />;
+      case 'dashboard':
+        return <AdminDashboard />;
+      case 'staff-menu':
+        return <StaffMenu />;
+      case 'create-report':
+        return <CreateReport />;
+      case 'view-report':
+        return <ViewReport />;
+      default:
+        return <LoginScreen />;
+    }
+  };
+
+  return renderCurrentView();
+};
+
+export default CleaningServiceApp;
